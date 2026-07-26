@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Post Assignment - College Portal</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #f4f7fb;
+            --panel: #ffffff;
+            --text: #14213d;
+            --muted: #64748b;
+            --primary: #2563eb;
+            --primary-soft: #e8f0ff;
+            --border: #e2e8f0;
+            --shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(180deg, #f8fbff 0%, var(--bg) 100%);
+            color: var(--text);
+        }
+        .sidebar {
+            position: sticky;
+            top: 0;
+            left: 0;
+            height: 100vh;
+            width: 280px;
+            background: var(--panel);
+            border-right: 1px solid var(--border);
+            padding: 1.5rem 1rem;
+            box-shadow: 8px 0 24px rgba(15, 23, 42, 0.04);
+            display: flex;
+            flex-direction: column;
+        }
+        .sidebar-brand {
+            font-weight: 700;
+            font-size: 1.2rem;
+            color: var(--primary);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            margin-bottom: 1.5rem;
+        }
+        .sidebar-profile {
+            background: linear-gradient(135deg, var(--primary-soft), #f8fbff);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 1rem;
+            margin-bottom: 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        .profile-avatar {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: var(--primary);
+            color: white;
+            display: grid;
+            place-items: center;
+            font-weight: 700;
+        }
+        .nav-link {
+            color: #334155;
+            font-weight: 600;
+            padding: 0.8rem 0.95rem;
+            border-radius: 12px;
+            margin-bottom: 0.4rem;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.7rem;
+        }
+        .nav-link:hover, .nav-link.active {
+            background: var(--primary-soft);
+            color: var(--primary);
+        }
+        .sidebar-footer {
+            margin-top: auto;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border);
+        }
+        .main-content {
+            flex: 1;
+            padding: 2rem;
+        }
+        .top-navbar {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            padding: 1rem 1.25rem;
+            margin-bottom: 1.5rem;
+            box-shadow: var(--shadow);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .card {
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            box-shadow: var(--shadow);
+            background: var(--panel);
+            max-width: 760px;
+        }
+        .card-header {
+            background: transparent;
+            border-bottom: 1px solid var(--border);
+            font-weight: 700;
+            padding: 1rem 1.25rem;
+        }
+        .card-body { padding: 1.2rem 1.25rem; }
+        .btn-primary {
+            background-color: var(--primary);
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            padding: 0.7rem 1rem;
+        }
+        .btn-primary:hover { background-color: #1d4ed8; }
+        .form-control, .form-select {
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            padding: 0.75rem 0.8rem;
+        }
+        .form-control:focus, .form-select:focus {
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+            border-color: var(--primary);
+        }
+        @media (max-width: 992px) {
+            .sidebar { position: relative; width: 100%; height: auto; box-shadow: none; border-right: none; border-bottom: 1px solid var(--border); }
+            .main-content { padding: 1rem; }
+            .top-navbar { flex-direction: column; align-items: flex-start; gap: 0.6rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="d-flex flex-column flex-lg-row">
+        <aside class="sidebar">
+            <a href="/dashboard" class="sidebar-brand"><i class="bi bi-mortarboard-fill"></i> College Portal</a>
+            <div class="sidebar-profile">
+                <div class="profile-avatar">{{ (session.get('username', 'G')|first|upper) }}</div>
+                <div>
+                    <h6 class="mb-0 fw-bold">{{ session.get('username', 'Guest') }}</h6>
+                    <p class="mb-0 small text-muted">{{ session.get('role', 'User')|title }}</p>
+                </div>
+            </div>
+            <nav class="nav flex-column">
+                <a href="/dashboard" class="nav-link"><i class="bi bi-speedometer2"></i> Dashboard</a>
+                <a href="/assignments" class="nav-link"><i class="bi bi-journal-bookmark"></i> Assignments</a>
+                <a href="/post_assignment" class="nav-link active"><i class="bi bi-pencil-square"></i> Post Assignment</a>
+                <a href="/submissions" class="nav-link"><i class="bi bi-clipboard-data"></i> Submissions</a>
+            </nav>
+            <div class="sidebar-footer">
+                <a href="/logout" class="btn btn-outline-danger btn-sm w-100 rounded-pill"><i class="bi bi-box-arrow-right"></i> Logout</a>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <div class="top-navbar">
+                <div>
+                    <h4 class="fw-bold mb-1">Publish New Assignment</h4>
+                    <p class="mb-0 text-muted">Create and send assignments to your class</p>
+                </div>
+                <span class="badge bg-light text-primary border border-primary px-3 py-2 rounded-pill text-uppercase">{{ session.get('role', 'User') }}</span>
+            </div>
+
+            <div class="card">
+                <div class="card-header">Assignment Details</div>
+                <div class="card-body">
+                    <form method="POST" action="/post_assignment">
+                        <div class="mb-3">
+                            <label class="form-label text-secondary small fw-medium">Assignment Title</label>
+                            <input type="text" name="title" class="form-control" placeholder="e.g. Python Lab Assignment 1" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label text-secondary small fw-medium">Description / Instructions</label>
+                            <textarea name="description" class="form-control" rows="4" placeholder="Enter assignment instructions..." required></textarea>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label text-secondary small fw-medium">Deadline Date</label>
+                            <input type="date" name="deadline" class="form-control" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label text-secondary small fw-medium">Assign to Class / Department</label>
+                            <select name="target_class" class="form-select" required>
+                                <option value="All">All Departments / Classes</option>
+                                <option value="B.Tech CSE">B.Tech CSE</option>
+                                <option value="B.Tech IT">B.Tech IT</option>
+                                <option value="B.E ECE">B.E ECE</option>
+                            </select>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100 py-2 mt-3">Publish Assignment</button>
+                    </form>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
