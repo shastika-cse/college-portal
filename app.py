@@ -261,12 +261,15 @@ def login():
             session['class_name'] = user['class_name'] or ''
             session['year'] = user['year'] or ''
             session['reg_no'] = user['reg_no'] or ''
+            
             if user['role'] == 'student':
                 return redirect(url_for('dashboard'))
-            return redirect(url_for('assignments'))
+            elif user['role'] == 'faculty':
+                return redirect(url_for('submissions'))
+            else:
+                return redirect(url_for('assignments'))
         else:
             error = "Invalid Credentials! Please check your email and password."
-            
     return render_template('login.html', error=error)
 
 # Assignments Main Page (List assignments)
