@@ -4,104 +4,164 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My Profile - College Portal</title>
+    <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        :root { --bg:#f4f7fb; --panel:#fff; --text:#14213d; --muted:#64748b; --primary:#2563eb; --border:#e2e8f0; --shadow:0 12px 30px rgba(15,23,42,.08); }
-        body { font-family:'Inter',sans-serif; background:linear-gradient(180deg,#f8fbff 0%,var(--bg) 100%); color:var(--text); }
-        .sidebar { position:sticky; top:0; height:100vh; width:280px; background:var(--panel); border-right:1px solid var(--border); padding:1.5rem 1rem; display:flex; flex-direction:column; box-shadow:8px 0 24px rgba(15,23,42,.04); }
-        .sidebar-brand { font-weight:700; font-size:1.2rem; color:var(--primary); text-decoration:none; display:flex; align-items:center; gap:0.6rem; margin-bottom:1.5rem; }
-        .sidebar-profile { background:linear-gradient(135deg,#e8f0ff,#f8fbff); border:1px solid var(--border); border-radius:16px; padding:1rem; margin-bottom:1.25rem; display:flex; align-items:center; gap:0.75rem; }
-        .profile-avatar { width:44px; height:44px; border-radius:50%; background:var(--primary); color:white; display:grid; place-items:center; font-weight:700; }
-        .nav-link { color:#334155; font-weight:600; padding:0.8rem 0.95rem; border-radius:12px; margin-bottom:0.4rem; transition:all .2s; display:flex; align-items:center; gap:0.7rem; }
-        .nav-link:hover, .nav-link.active { background: #e8f0ff; color: var(--primary); }
-        .sidebar-footer { margin-top:auto; padding-top:1rem; border-top:1px solid var(--border); }
-        .main-content { flex:1; padding:2rem; }
-        .top-navbar { background:var(--panel); border:1px solid var(--border); border-radius:18px; padding:1rem 1.25rem; margin-bottom:1.5rem; box-shadow:var(--shadow); display:flex; justify-content:space-between; align-items:center; }
-        .card { border:1px solid var(--border); border-radius:18px; box-shadow:var(--shadow); background:var(--panel); }
-        .card-header { background:transparent; border-bottom:1px solid var(--border); font-weight:700; padding:1rem 1.25rem; }
-        .card-body { padding:1.2rem 1.25rem; }
-        .form-control { border-radius:10px; border:1px solid var(--border); }
-        .btn-primary { background:var(--primary); border:none; border-radius:10px; }
-        @media (max-width:992px) { .sidebar { position:relative; width:100%; height:auto; border-right:none; border-bottom:1px solid var(--border); } .main-content{padding:1rem;} .top-navbar{flex-direction:column; align-items:flex-start; gap:0.6rem;} }
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #f4f7fe;
+            color: #2b3674;
+        }
+        .sidebar {
+            width: 260px;
+            background: #ffffff;
+            position: fixed;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            z-index: 100;
+            box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.05);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+        .sidebar-brand {
+            font-weight: 700;
+            font-size: 1.25rem;
+            color: #2b3674;
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .sidebar-profile {
+            background: #F4F7FE;
+            border-radius: 16px;
+            padding: 15px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 25px;
+        }
+        .profile-avatar {
+            width: 42px;
+            height: 42px;
+            background: #4318FF;
+            color: white;
+            font-weight: 700;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+        }
+        .sidebar .nav-link {
+            font-weight: 600;
+            color: #a3AED0;
+            padding: 12px 15px;
+            border-radius: 12px;
+            margin-bottom: 8px;
+            transition: all 0.3s ease;
+        }
+        .sidebar .nav-link:hover, .sidebar .nav-link.active {
+            color: #4318FF;
+            background: #F4F7FE;
+        }
+        .main-content {
+            margin-left: 260px;
+            padding: 30px;
+        }
+        .custom-card {
+            background: #ffffff;
+            border-radius: 20px;
+            border: none;
+            box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.03);
+            padding: 25px;
+            margin-bottom: 25px;
+        }
     </style>
 </head>
 <body>
-    <div class="d-flex flex-column flex-lg-row">
-        <aside class="sidebar">
-            <a href="/student_dashboard" class="sidebar-brand"><i class="bi bi-mortarboard-fill"></i> College Portal</a>
-            <div class="sidebar-profile">
-                <div class="profile-avatar">{{ (student['username']|default('S')|first|upper) }}</div>
-                <div>
-                    <h6 class="mb-0 fw-bold">{{ student['username'] }}</h6>
-                    <p class="mb-0 small text-muted">Student</p>
-                </div>
-            </div>
-            <nav class="nav flex-column">
-                <a href="/dashboard" class="nav-link"><i class="bi bi-speedometer2"></i> Dashboard</a>
-                <a href="/assignments" class="nav-link"><i class="bi bi-journal-bookmark"></i> Assignments</a>
-                <a href="/profile" class="nav-link active"><i class="bi bi-person-lines-fill"></i> My Profile</a>
-            </nav>
-            <div class="sidebar-footer">
-                <a href="/logout" class="btn btn-outline-danger btn-sm w-100 rounded-pill"><i class="bi bi-box-arrow-right"></i> Logout</a>
-            </div>
-        </aside>
 
-        <main class="main-content">
-            <div class="top-navbar">
-                <div>
-                    <h4 class="fw-bold mb-1">My Profile</h4>
-                    <p class="mb-0 text-muted">Manage your personal details securely</p>
-                </div>
-                <span class="badge bg-light text-primary border border-primary px-3 py-2 rounded-pill text-uppercase">Student</span>
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+        <div class="sidebar-brand">
+            <i class="bi bi-mortarboard-fill text-primary fs-4"></i> College Portal
+        </div>
+        
+        <!-- User Profile Badge -->
+        <div class="sidebar-profile" style="background: #F4F7FE; border-radius: 16px; padding: 15px; display: flex; align-items: center; gap: 12px; margin-bottom: 25px;">
+            <div class="profile-avatar" style="width: 42px; height: 42px; background: #4318FF; color: white; font-weight: 700; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.1rem;">
+                {{ session['username'][0] | upper if session.get('username') else 'U' }}
             </div>
+            <div>
+                <h6 class="fw-bold mb-0 text-dark" style="font-size: 0.95rem;">{{ session.get('username', 'User') }}</h6>
+                <p class="text-muted mb-0 small text-capitalize">{{ session.get('role', 'User') }}</p>
+            </div>
+        </div>
 
-            <div class="card">
-                <div class="card-header">Personal Information</div>
-                <div class="card-body">
-                    {% if error %}
-                        <div class="alert alert-danger">{{ error }}</div>
-                    {% endif %}
-                    {% if success %}
-                        <div class="alert alert-success">{{ success }}</div>
-                    {% endif %}
-                    <form method="POST" action="/profile">
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <label class="form-label">Full Name</label>
-                                <input type="text" class="form-control" name="username" value="{{ student['username'] }}" required>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Email</label>
-                                <input type="email" class="form-control" name="email" value="{{ student['email'] }}" required>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Register No</label>
-                                <input type="text" class="form-control" name="reg_no" value="{{ student['reg_no'] or '' }}">
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Class</label>
-                                <input type="text" class="form-control" name="class_name" value="{{ student['class_name'] or '' }}">
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Year</label>
-                                <input type="text" class="form-control" name="year" value="{{ student['year'] or '' }}">
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Phone</label>
-                                <input type="text" class="form-control" name="phone" value="{{ student['phone'] or '' }}">
-                            </div>
-                            <div class="col-md-12">
-                                <label class="form-label">Department</label>
-                                <input type="text" class="form-control" name="department" value="{{ student['department'] or '' }}">
-                            </div>
-                        </div>
-                        <button type="submit" class="btn btn-primary mt-4">Save Changes</button>
-                    </form>
+        <div class="nav flex-column flex-grow-1">
+            {% if session.get('role') == 'faculty' %}
+                <a href="/submissions" class="nav-link"><i class="bi bi-grid-fill me-2"></i> Submissions</a>
+                <a href="/post_assignment" class="nav-link"><i class="bi bi-plus-circle-fill me-2"></i> Post Assignment</a>
+                <a href="/assignments" class="nav-link"><i class="bi bi-journal-text me-2"></i> All Assignments</a>
+            {% else %}
+                <a href="/dashboard" class="nav-link"><i class="bi bi-grid-fill me-2"></i> Dashboard</a>
+                <a href="/assignments" class="nav-link"><i class="bi bi-journal-text me-2"></i> Assignments</a>
+                <a href="/profile" class="nav-link active"><i class="bi bi-person-fill me-2"></i> My Profile</a>
+            {% endif %}
+        </div>
+        <div>
+            <a href="/logout" class="btn btn-outline-danger w-100 rounded-pill py-2 fw-bold"><i class="bi bi-box-arrow-right me-2"></i> Logout</a>
+        </div>
+    </aside>
+    <!-- Main Content Area -->
+    <main class="main-content">
+        
+        <!-- Top Title Header -->
+        <div class="custom-card mb-4">
+            <h3 class="fw-bold mb-1">My Profile</h3>
+            <p class="text-muted mb-0">Manage your personal details securely</p>
+        </div>
+
+        <!-- Profile Information Section -->
+        <div class="custom-card">
+            <h5 class="fw-bold mb-4">Personal Information</h5>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label text-muted small fw-bold">Full Name</label>
+                    <div class="p-3 bg-light rounded-3 fw-semibold">{{ student['username'] if student else '' }}</div>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label text-muted small fw-bold">Register No</label>
+                    <div class="p-3 bg-light rounded-3 fw-semibold">{{ student['reg_no'] if student else '' }}</div>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label class="form-label text-muted small fw-bold">Department</label>
+                    <div class="p-3 bg-light rounded-3 fw-semibold">{{ student['department'] if student and 'department' in student and student['department'] else 'Computer Science and Engineering' }}</div>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label class="form-label text-muted small fw-bold">Section</label>
+                    <div class="p-3 bg-light rounded-3 fw-semibold">{{ student['section'] if student and 'section' in student and student['section'] else 'A' }}</div>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label class="form-label text-muted small fw-bold">Year</label>
+                    <div class="p-3 bg-light rounded-3 fw-semibold">1st Year</div>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label class="form-label text-muted small fw-bold">Semester</label>
+                    <div class="p-3 bg-light rounded-3 fw-semibold">2nd Semester</div>
                 </div>
             </div>
-        </main>
-    </div>
+        </div>
+
+    </main>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
