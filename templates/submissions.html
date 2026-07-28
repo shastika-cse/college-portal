@@ -132,26 +132,38 @@
 </head>
 <body>
     <div class="d-flex flex-column flex-lg-row">
-        <aside class="sidebar">
-            <a href="/dashboard" class="sidebar-brand"><i class="bi bi-mortarboard-fill"></i> College Portal</a>
-            <div class="sidebar-profile">
-                <div class="profile-avatar">{{ (session.get('username', 'G')|first|upper) }}</div>
-                <div>
-                    <h6 class="mb-0 fw-bold">{{ session.get('username', 'Guest') }}</h6>
-                    <p class="mb-0 small text-muted">{{ session.get('role', 'User')|title }}</p>
-                </div>
+        <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+        <div class="sidebar-brand">
+            <i class="bi bi-mortarboard-fill text-primary fs-4"></i> College Portal
+        </div>
+        
+        <!-- User Profile Badge -->
+        <div class="sidebar-profile" style="background: #F4F7FE; border-radius: 16px; padding: 15px; display: flex; align-items: center; gap: 12px; margin-bottom: 25px;">
+            <div class="profile-avatar" style="width: 42px; height: 42px; background: #4318FF; color: white; font-weight: 700; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.1rem;">
+                {{ session['username'][0] | upper if session.get('username') else 'U' }}
             </div>
-            <nav class="nav flex-column">
-                <a href="/dashboard" class="nav-link"><i class="bi bi-speedometer2"></i> Dashboard</a>
-                <a href="/assignments" class="nav-link"><i class="bi bi-journal-bookmark"></i> Assignments</a>
-                <a href="/post_assignment" class="nav-link"><i class="bi bi-pencil-square"></i> Post Assignment</a>
-                <a href="/submissions" class="nav-link active"><i class="bi bi-clipboard-data"></i> Submissions</a>
-            </nav>
-            <div class="sidebar-footer">
-                <a href="/logout" class="btn btn-outline-danger btn-sm w-100 rounded-pill"><i class="bi bi-box-arrow-right"></i> Logout</a>
+            <div>
+                <h6 class="fw-bold mb-0 text-dark" style="font-size: 0.95rem;">{{ session.get('username', 'User') }}</h6>
+                <p class="text-muted mb-0 small text-capitalize">{{ session.get('role', 'User') }}</p>
             </div>
-        </aside>
+        </div>
 
+        <div class="nav flex-column flex-grow-1">
+            {% if session.get('role') == 'faculty' %}
+                <a href="/submissions" class="nav-link active"><i class="bi bi-grid-fill me-2"></i> Submissions</a>
+                <a href="/post_assignment" class="nav-link"><i class="bi bi-plus-circle-fill me-2"></i> Post Assignment</a>
+                <a href="/assignments" class="nav-link"><i class="bi bi-journal-text me-2"></i> All Assignments</a>
+            {% else %}
+                <a href="/dashboard" class="nav-link"><i class="bi bi-grid-fill me-2"></i> Dashboard</a>
+                <a href="/assignments" class="nav-link"><i class="bi bi-journal-text me-2"></i> Assignments</a>
+                <a href="/profile" class="nav-link"><i class="bi bi-person-fill me-2"></i> My Profile</a>
+            {% endif %}
+        </div>
+        <div>
+            <a href="/logout" class="btn btn-outline-danger w-100 rounded-pill py-2 fw-bold"><i class="bi bi-box-arrow-right me-2"></i> Logout</a>
+        </div>
+    </aside>
         <main class="main-content">
             <div class="top-navbar">
                 <div>
