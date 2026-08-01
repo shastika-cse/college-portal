@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Faculty Profile - College Portal</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <style>
+        body { background-color: #f8f9fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .sidebar { min-height: 100vh; background-color: #ffffff; border-right: 1px solid #dee2e6; padding: 20px; }
+        .sidebar-brand { font-size: 1.25rem; font-weight: bold; color: #0d6efd; margin-bottom: 30px; display: flex; align-items: center; gap: 10px; }
+        .nav-link { color: #495057; padding: 10px 15px; border-radius: 8px; margin-bottom: 5px; font-weight: 500; }
+        .nav-link:hover, .nav-link.active { background-color: #e7f1ff; color: #0d6efd; }
+        .main-content { padding: 30px; }
+        .custom-card { background: #ffffff; border: none; border-radius: 12px; box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075); padding: 25px; margin-bottom: 20px; }
+        .profile-header { background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%); color: white; border-radius: 12px; padding: 30px; margin-bottom: 25px; }
+        .section-title { font-size: 1.1rem; font-weight: bold; color: #0d6efd; border-bottom: 2px solid #e7f1ff; padding-bottom: 8px; margin-bottom: 20px; display: flex; align-items: center; gap: 8px; }
+    </style>
+</head>
+<body>
+
+    <div class="d-flex flex-column flex-lg-row">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar col-lg-3 col-xl-2 d-none d-lg-block">
+            <div class="sidebar-brand">
+                <i class="bi bi-mortarboard-fill"></i> College Portal
+            </div>
+            
+            <div class="sidebar-profile mb-4" style="background: #F4F7FE; border-radius: 16px; padding: 15px; display: flex; align-items: center; gap: 12px;">
+                <div class="profile-avatar" style="width: 42px; height: 42px; background: #4318FF; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold;">
+                    {{ session['username'][0] | upper if session.get('username') else 'F' }}
+                </div>
+                <div>
+                    <h6 class="fw-bold mb-0 text-dark" style="font-size: 0.95rem;">{{ session.get('username', 'Faculty') }}</h6>
+                    <p class="text-muted mb-0 small text-capitalize">Faculty</p>
+                </div>
+            </div>
+
+            <div class="nav flex-column flex-grow-1">
+                <a href="/submissions" class="nav-link"><i class="bi bi-grid-fill me-2"></i> Submissions</a>
+                <a href="/faculty_profile" class="nav-link active"><i class="bi bi-person-badge-fill me-2"></i> My Profile</a>
+                <a href="/post_assignment" class="nav-link"><i class="bi bi-plus-circle-fill me-2"></i> Post Assignment</a>
+                <a href="/assignments" class="nav-link"><i class="bi bi-journal-text me-2"></i> All Assignments</a>
+            </div>
+            <div>
+                <a href="/logout" class="btn btn-outline-danger w-100 rounded-pill py-2 fw-bold"><i class="bi bi-box-arrow-right me-2"></i> Logout</a>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content flex-grow-1">
+            <div class="profile-header d-flex flex-column flex-md-row align-items-center justify-content-between gap-4">
+                <div class="d-flex align-items-center gap-4">
+                    <div style="width: 90px; height: 90px; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2.5rem; font-weight: bold; border: 3px solid white;">
+                        {{ session['username'][0] | upper if session.get('username') else 'F' }}
+                    </div>
+                    <div>
+                        <h2 class="fw-bold mb-1">{{ faculty.full_name if faculty and faculty.full_name else session.get('username', 'Faculty Member') }}</h2>
+                        <p class="mb-0 opacity-75">{{ faculty.designation if faculty and faculty.designation else 'Professor' }} | {{ faculty.department if faculty and faculty.department else 'B.Tech CSE' }}</p>
+                    </div>
+                </div>
+                <a href="/edit_faculty_profile" class="btn btn-light text-primary fw-bold px-4 py-2 rounded-pill"><i class="bi bi-pencil-square me-2"></i> Edit Profile</a>
+            </div>
+
+            <!-- Basic Details -->
+            <div class="custom-card">
+                <div class="section-title"><i class="bi bi-person-fill"></i> Basic Details</div>
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="text-muted small">Full Name</label>
+                        <div class="fw-bold text-dark">{{ faculty.full_name if faculty else '-' }}</div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="text-muted small">Employee ID</label>
+                        <div class="fw-bold text-dark">{{ faculty.employee_id if faculty else '-' }}</div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="text-muted small">Designation</label>
+                        <div class="fw-bold text-dark">{{ faculty.designation if faculty else '-' }}</div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="text-muted small">Department</label>
+                        <div class="fw-bold text-dark">{{ faculty.department if faculty else '-' }}</div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="text-muted small">Email</label>
+                        <div class="fw-bold text-dark">{{ faculty.email if faculty else '-' }}</div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="text-muted small">Phone Number</label>
+                        <div class="fw-bold text-dark">{{ faculty.phone if faculty else '-' }}</div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="text-muted small">Office Room Number</label>
+                        <div class="fw-bold text-dark">{{ faculty.office_room if faculty else '-' }}</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Academic Details -->
+            <div class="custom-card">
+                <div class="section-title"><i class="bi bi-book-fill"></i> Academic Details</div>
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="text-muted small">Qualification</label>
+                        <div class="fw-bold text-dark">{{ faculty.qualification if faculty else '-' }}</div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="text-muted small">Specialization</label>
+                        <div class="fw-bold text-dark">{{ faculty.specialization if faculty else '-' }}</div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="text-muted small">Years of Experience</label>
+                        <div class="fw-bold text-dark">{{ faculty.experience if faculty else '-' }} Years</div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="text-muted small">Subjects Handling</label>
+                        <div class="fw-bold text-dark">{{ faculty.subjects_handling if faculty else '-' }}</div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="text-muted small">Current Semester Subjects</label>
+                        <div class="fw-bold text-dark">{{ faculty.current_subjects if faculty else '-' }}</div>
+                    </div>
+                    <div class="col-12">
+                        <label class="text-muted small">Research Areas</label>
+                        <div class="fw-bold text-dark">{{ faculty.research_areas if faculty else '-' }}</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- About -->
+            <div class="custom-card">
+                <div class="section-title"><i class="bi bi-info-circle-fill"></i> About</div>
+                <div class="row g-3">
+                    <div class="col-12">
+                        <label class="text-muted small">Short Bio / About Faculty</label>
+                        <div class="text-dark">{{ faculty.bio if faculty and faculty.bio else 'No bio added yet.' }}</div>
+                    </div>
+                    <div class="col-12 mt-3">
+                        <label class="text-muted small">Teaching Philosophy</label>
+                        <div class="text-dark">{{ faculty.philosophy if faculty and faculty.philosophy else 'Not specified.' }}</div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
