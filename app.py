@@ -1,22 +1,20 @@
-import os
-from datetime import date
 from flask import Flask, render_template, request, redirect, url_for, session
 import sqlite3
+import os
+from datetime import date
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key_here'
 
 def get_db_connection():
-    conn = sqlite3.connect('college_portal.db')
+    conn = sqlite3.connect('database.db')
     conn.row_factory = sqlite3.Row
     return conn
 
-# Create Tables if not exist
 def init_db():
     conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    cursor.execute('''
+    # Users table with all fields (reg_no, class_name, section, year, semester)
+    conn.execute('''
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT NOT NULL,
@@ -25,14 +23,13 @@ def init_db():
             role TEXT NOT NULL,
             reg_no TEXT,
             class_name TEXT,
+            section TEXT,
             year TEXT,
-            phone TEXT,
-            department TEXT,
-            profile_updated_at TEXT
+            semester TEXT
         )
     ''')
-    
-    cursor.execute('''
+    # Assignments table
+    conn.execute('''
         CREATE TABLE IF NOT EXISTS assignments (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             title TEXT NOT NULL,
@@ -41,8 +38,8 @@ def init_db():
             target_class TEXT
         )
     ''')
-    
-    cursor.execute('''
+    # Submissions table
+    conn.execute('''
         CREATE TABLE IF NOT EXISTS submissions (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             assignment_id INTEGER,
@@ -52,16 +49,9 @@ def init_db():
             class_name TEXT,
             year TEXT,
             file_path TEXT,
-            is_duplicate INTEGER DEFAULT 0,
-            submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            is_duplicate INTEGER DEFAULT 0
         )
     ''')
-    
-    # Auto-add is_duplicate column if older database exists without it
-    existing_cols = {row['name'] for row in cursor.execute("PRAGMA table_info(submissions)").fetchall()}
-    if 'is_duplicate' not in existing_cols:
-        cursor.execute("ALTER TABLE submissions ADD COLUMN is_duplicate INTEGER DEFAULT 0")
-
     conn.commit()
     conn.close()
 
@@ -70,14 +60,65 @@ def init_db():
 def home():
     return render_template('index.html')
 
-# Dashboard / Student Dashboard
+# Login Route
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        email = request.form['email']
+        password = request.form['password']
+        
+        conn = get_db_connection()
+        user = conn.execute('SELECT * FROM users WHERE email = ? AND password = ?', (email, password)).fetchone()
+        conn.close()
+        
+        if user:
+            session['user_id'] = user['id']
+            session['username'] = user['username']
+            session['role'] = user['role']
+            if user['role'] == 'faculty':
+                return redirect(url_for('submissions'))
+            else:
+                return redirect(url_for('dashboard'))
+        else:
+            return "Invalid Credentials, please try again."
+            
+    return render_template('login.html')
+
+# Register / Create Account Route
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'POST':
+        username = request.form['username']
+        email = request.form['email']
+        password = request.form['password']
+        role = request.form['role']
+        reg_no = request.form.get('reg_no', '')
+        class_name = request.form.get('class_name', '')
+        section = request.form.get('section', '')
+        year = request.form.get('year', '')
+        semester = request.form.get('semester', '')
+        
+        conn = get_db_connection()
+        try:
+            conn.execute('''
+                INSERT INTO users (username, email, password, role, reg_no, class_name, section, year, semester)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (username, email, password, role, reg_no, class_name, section, year, semester))
+            conn.commit()
+        except sqlite3.IntegrityError:
+            conn.close()
+            return "Email already exists!"
+        conn.close()
+        return redirect(url_for('login'))
+        
+    return render_template('register.html')
+
+# Student Dashboard Route
 @app.route('/dashboard')
 @app.route('/student_dashboard')
 def dashboard():
-    if 'user_id' not in session:
+    if 'user_id' not in session or session.get('role') != 'student':
         return redirect(url_for('login'))
-    if session.get('role') != 'student':
-        return redirect(url_for('assignments'))
         
     conn = get_db_connection()
     student = conn.execute("SELECT * FROM users WHERE id = ?", (session['user_id'],)).fetchone()
@@ -89,7 +130,7 @@ def dashboard():
     ).fetchall()
     
     submitted_assignment_ids = {
-        row['assignment_id']
+        row['assignment_id'] 
         for row in conn.execute(
             "SELECT assignment_id FROM submissions WHERE reg_no = ? AND class_name = ?",
             (student['reg_no'] if student else '', student_class)
@@ -104,6 +145,7 @@ def dashboard():
         if assignment['id'] in submitted_assignment_ids:
             if assignment['deadline'] and assignment['deadline'] <= today:
                 completed_count += 1
+                
     pending_count = len(assignments) - submitted_count
     progress_percentage = int((completed_count / len(assignments)) * 100) if assignments else 0
     
@@ -118,60 +160,54 @@ def dashboard():
         progress_percentage=progress_percentage
     )
 
-# Profile Route
-@app.route('/profile', methods=['GET', 'POST'])
-def profile():
+# All Assignments Route (Student View / Portal)
+@app.route('/assignments')
+def assignments():
     if 'user_id' not in session:
         return redirect(url_for('login'))
-    if session.get('role') != 'student':
-        return redirect(url_for('assignments'))
         
     conn = get_db_connection()
-    error = None
-    success = None
-    
-    if request.method == 'POST':
-        username = request.form.get('username', '').strip()
-        email = request.form.get('email', '').strip()
-        reg_no = request.form.get('reg_no', '').strip()
-        class_name = request.form.get('class_name', '').strip()
-        year = request.form.get('year', '').strip()
-        phone = request.form.get('phone', '').strip()
-        department = request.form.get('department', '').strip()
-        
-        if not username or not email:
-            error = 'Name and email are required.'
-        else:
-            existing_user = conn.execute(
-                'SELECT id FROM users WHERE email = ? AND id != ?',
-                (email, session['user_id'])
-            ).fetchone()
-            if existing_user:
-                error = 'That email is already in use by another account.'
-            else:
-                conn.execute(
-                    '''
-                    UPDATE users
-                    SET username = ?, email = ?, reg_no = ?, class_name = ?, year = ?, phone = ?, department = ?, profile_updated_at = ?
-                    WHERE id = ?
-                    ''',
-                    (username, email, reg_no, class_name, year, phone, department, date.today().isoformat(), session['user_id'])
-                )
-                conn.commit()
-                session['username'] = username
-                session['class_name'] = class_name
-                session['year'] = year
-                session['reg_no'] = reg_no
-                success = 'Your profile was updated successfully.'
-                
-    student = conn.execute("SELECT * FROM users WHERE id = ?", (session['user_id'],)).fetchone()
+    assignments = conn.execute("SELECT * FROM assignments").fetchall()
     conn.close()
-    return render_template('student_profile.html', student=student, error=error, success=success)
+    return render_template('assignments.html', assignments=assignments)
 
-# Faculty: Submissions Tracker Page
+# Submit Assignment Route (Student)
+@app.route('/submit_assignment/<int:assignment_id>', methods=['POST'])
+def submit_assignment(assignment_id):
+    if 'user_id' not in session or session.get('role') != 'student':
+        return redirect(url_for('login'))
+        
+    conn = get_db_connection()
+    assignment = conn.execute("SELECT * FROM assignments WHERE id = ?", (assignment_id,)).fetchone()
+    user = conn.execute("SELECT * FROM users WHERE id = ?", (session['user_id'],)).fetchone()
+    
+    if 'file' in request.files:
+        file = request.files['file']
+        if file.filename != '':
+            os.makedirs('static/uploads', exist_ok=True)
+            file_path = os.path.join('static/uploads', file.filename)
+            file.save(file_path)
+            
+            existing_sub = conn.execute(
+                "SELECT * FROM submissions WHERE assignment_id = ? AND file_path = ? AND reg_no != ?",
+                (assignment_id, file_path, user['reg_no'])
+            ).fetchone()
+            
+            is_dup = 1 if existing_sub else 0
+            
+            conn.execute("""
+                INSERT INTO submissions (assignment_id, assignment_title, student_name, reg_no, class_name, year, file_path, is_duplicate)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """, (assignment_id, assignment['title'], user['username'], user['reg_no'], user['class_name'], user['year'], file_path, is_dup))
+            conn.commit()
+            
+    conn.close()
+    return redirect(url_for('assignments'))
+
+# Faculty Submissions Route
 @app.route('/submissions')
 def submissions():
-    if 'user_id' not in session or session['role'] != 'faculty':
+    if 'user_id' not in session or session.get('role') != 'faculty':
         return redirect(url_for('login'))
         
     filter_assignment = request.args.get('filter_assignment', '')
@@ -198,44 +234,44 @@ def submissions():
         query += " AND year LIKE ?"
         params.append(f"%{filter_year}%")
         
-    submissions = conn.execute(query, params).fetchall()
+    submissions_list = conn.execute(query, params).fetchall()
     conn.close()
     
-    return render_template('submissions.html', submissions=submissions, assignments=assignments)
+    return render_template('submissions.html', submissions=submissions_list, assignments=assignments)
 
-# Student: Submit Assignment Page with Duplicate Detection
-@app.route('/submit_assignment/<int:assignment_id>', methods=['POST'])
-def submit_assignment(assignment_id):
-    if 'user_id' not in session or session['role'] != 'student':
+# Post Assignment Route (Faculty)
+@app.route('/post_assignment', methods=['GET', 'POST'])
+def post_assignment():
+    if 'user_id' not in session or session.get('role') != 'faculty':
+        return redirect(url_for('login'))
+        
+    if request.method == 'POST':
+        title = request.form['title']
+        description = request.form['description']
+        deadline = request.form['deadline']
+        target_class = request.form['target_class']
+        
+        conn = get_db_connection()
+        conn.execute('''
+            INSERT INTO assignments (title, description, deadline, target_class)
+            VALUES (?, ?, ?, ?)
+        ''', (title, description, deadline, target_class))
+        conn.commit()
+        conn.close()
+        return redirect(url_for('submissions'))
+        
+    return render_template('post_assignment.html')
+
+# Profile Route
+@app.route('/profile')
+def profile():
+    if 'user_id' not in session:
         return redirect(url_for('login'))
         
     conn = get_db_connection()
-    assignment = conn.execute("SELECT * FROM assignments WHERE id = ?", (assignment_id,)).fetchone()
     user = conn.execute("SELECT * FROM users WHERE id = ?", (session['user_id'],)).fetchone()
-    
-    if 'file' in request.files:
-        file = request.files['file']
-        if file.filename != '':
-            os.makedirs('static/uploads', exist_ok=True)
-            file_path = os.path.join('static/uploads', file.filename)
-            file.save(file_path)
-            
-            # Check if same file path/name was already submitted for this assignment by someone else
-            existing_sub = conn.execute(
-                "SELECT * FROM submissions WHERE assignment_id = ? AND file_path = ? AND reg_no != ?",
-                (assignment_id, file_path, user['reg_no'])
-            ).fetchone()
-            
-            is_dup = 1 if existing_sub else 0
-            
-            conn.execute("""
-                INSERT INTO submissions (assignment_id, assignment_title, student_name, reg_no, class_name, year, file_path, is_duplicate)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            """, (assignment_id, assignment['title'], user['username'], user['reg_no'], user['class_name'], user['year'], file_path, is_dup))
-            conn.commit()
-            
     conn.close()
-    return redirect(url_for('assignments'))
+    return render_template('student_profile.html', user=user)
 
 # Logout Route
 @app.route('/logout')
