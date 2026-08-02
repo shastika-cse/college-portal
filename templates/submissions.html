@@ -25,15 +25,17 @@
                 <i class="bi bi-mortarboard-fill"></i> College Portal
             </div>
             
-            <div class="sidebar-profile mb-4" style="background: #F4F7FE; border-radius: 16px; padding: 15px; display: flex; align-items: center; gap: 12px;">
-                <div class="profile-avatar" style="width: 42px; height: 42px; background: #4318FF; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold;">
-                    {{ session['username'][0] | upper if session.get('username') else 'F' }}
-                </div>
-                <div>
-                    <h6 class="fw-bold mb-0 text-dark" style="font-size: 0.95rem;">{{ session.get('username', 'Faculty') }}</h6>
-                    <p class="text-muted mb-0 small text-capitalize">{{ session.get('role', 'Faculty') }}</p>
-                </div>
-            </div>
+            <a href="/faculty_profile" class="text-decoration-none">
+    <div class="sidebar-profile mb-4 d-flex align-items-center" style="background: #F4F7FE; border-radius: 16px; padding: 15px;">
+        <div class="profile-avatar d-flex align-items-center justify-content-center fw-bold me-2" style="width: 42px; height: 42px; background: #4318FF; color: white; border-radius: 50%;">
+            {{ session.get('username', 'U')[0] | upper if session.get('username') else 'F' }}
+        </div>
+        <div>
+            <h6 class="fw-bold mb-0 text-dark" style="font-size: 0.95rem;">{{ session.get('name', session.get('username', 'Faculty')) }}</h6>
+            <p class="text-muted mb-0 small text-capitalize">{{ session.get('role', 'Faculty') }}</p>
+        </div>
+    </div>
+</a>
 
             <div class="nav flex-column flex-grow-1">
                 <a href="/submissions" class="nav-link active"><i class="bi bi-grid-fill me-2"></i> Submissions</a>

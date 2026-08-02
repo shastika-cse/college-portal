@@ -85,7 +85,8 @@ def login():
         role = request.form.get('role', 'faculty')
         session['username'] = username
         session['role'] = role
-        session['user_id'] = 1  # Dummy user id for tracking
+        session['user_id'] = 1
+        session['name'] = username  # temporary name storage
         if role == 'faculty':
             return redirect(url_for('submissions'))
         else:
@@ -195,6 +196,7 @@ def edit_faculty_profile():
         conn.close()
         return redirect(url_for('faculty_profile'))
         
+    # GET method part (Outside POST block)
     cursor.execute("SELECT * FROM faculty WHERE username = ?", (session.get('username'),))
     faculty = cursor.fetchone()
     conn.close()
@@ -227,6 +229,13 @@ def assignments_list():
     assignments_list = conn.execute('SELECT * FROM assignments').fetchall()
     conn.close()
     return render_template('assignments.html', assignments=assignments_list)
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'POST':
+        # Registration logic inga varum (if needed)
+        return redirect(url_for('login'))
+    return render_template('register.html')
 
 if __name__ == '__main__':
     app.run(debug=True)
