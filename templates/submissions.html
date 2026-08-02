@@ -26,10 +26,13 @@
             </div>
             
             <a href="/faculty_profile" class="text-decoration-none">
-    <div class="sidebar-profile mb-4 d-flex align-items-center" style="background: #F4F7FE; border-radius: 16px; padding: 15px;">
-        <div class="profile-avatar d-flex align-items-center justify-content-center fw-bold me-2" style="width: 42px; height: 42px; background: #4318FF; color: white; border-radius: 50%;">
-            {{ session.get('username', 'U')[0] | upper if session.get('username') else 'F' }}
+    <a href="/faculty_profile" class="text-decoration-none">
+        <div class="sidebar-profile mb-4 d-flex align-items-center" style="background: #F4F7FE; border-radius: 16px; padding: 15px;">
+            <div class="profile-avatar d-flex align-items-center justify-content-center fw-bold me-2" style="width: 42px; height: 42px; background: #4318FF; color: white; border-radius: 50%;">
+                {{ session.get('username', 'U')[0] | upper if session.get('username') else 'F' }}
+            </div>
         </div>
+    </a>
         <div>
             <h6 class="fw-bold mb-0 text-dark" style="font-size: 0.95rem;">{{ session.get('name', session.get('username', 'Faculty')) }}</h6>
             <p class="text-muted mb-0 small text-capitalize">{{ session.get('role', 'Faculty') }}</p>
