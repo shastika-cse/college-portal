@@ -30,7 +30,7 @@
                     {{ session['username'][0] | upper if session.get('username') else 'U' }}
                 </div>
                 <div>
-                    <h6 class="fw-bold mb-0 text-dark" style="font-size: 0.95rem;">{{ session.get('username', 'User') }}</h6>
+                    <h6 class="fw-bold mb-0 text-dark" style="font-size: 0.95rem;">{{ session.get('name') or user.get('name') or user.get('full_name') or session.get('username') or 'User' }}</h6>
                     <p class="text-muted mb-0 small text-capitalize">{{ session.get('role', 'User') }}</p>
                 </div>
             </div>
@@ -57,23 +57,23 @@
                 <div class="row g-4">
                     <div class="col-md-6">
                         <label class="form-label text-muted small">Full Name</label>
-                        <div class="p-3 bg-light rounded border-0 fw-bold text-dark">{{ user['username'] }}</div>
+                        <div class="p-3 bg-light rounded border-0 fw-bold text-dark">{{ session.get('name') or user.get('name') or user.get('full_name') or session.get('username') or 'User' }}</div>
                     </div>
                     <div class="col-md-6">
                         <label class="form-label text-muted small">Register No</label>
-                        <div class="p-3 bg-light rounded border-0 fw-bold text-dark">{{ user['reg_no'] }}</div>
+                        <div class="p-3 bg-light rounded border-0 fw-bold text-dark">{{ user['reg_no'] if user else '-' }}</div>
                     </div>
                     <div class="col-md-6">
                         <label class="form-label text-muted small">Email Address</label>
-                        <div class="p-3 bg-light rounded border-0 fw-bold text-dark">{{ user['email'] }}</div>
+                        <div class="p-3 bg-light rounded border-0 fw-bold text-dark">{{ session.get('username') or 'N/A' }}</div>
                     </div>
                     <div class="col-md-6">
                         <label class="form-label text-muted small">Department / Class</label>
-                        <div class="p-3 bg-light rounded border-0 fw-bold text-dark">{{ user['class_name'] }}</div>
+                        <div class="p-3 bg-light rounded border-0 fw-bold text-dark">{{ user['class_name'] if user else '-' }}</div>
                     </div>
                     <div class="col-md-6">
                         <label class="form-label text-muted small">Year</label>
-                        <div class="p-3 bg-light rounded border-0 fw-bold text-dark">{{ user['year'] }}</div>
+                        <div class="p-3 bg-light rounded border-0 fw-bold text-dark">{{ user['year'] if user else '-' }}</div>
                     </div>
                 </div>
             </div>
