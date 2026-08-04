@@ -132,15 +132,12 @@ init_db()
 
 @app.route('/')
 def index():
-    user_id = session.get('user_id')
-    username = session.get('username')
-    role = session.get('role')
-
-    if user_id or username:
-        if role == 'student':
-            return redirect(url_for('dashboard'))
-        return redirect(url_for('submissions'))
-
+    # Check if user is already logged in, otherwise send them to login page
+    if 'user_id' in session or 'username' in session:
+        if session.get('role') == 'faculty':
+            return redirect(url_for('submissions'))
+        else:
+            return redirect(url_for('student_dash'))
     return redirect(url_for('login'))
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -161,12 +158,9 @@ def login():
             cursor.execute("SELECT * FROM students WHERE username = ?", (username,))
             user = cursor.fetchone()
 
+        # 1. First, resolve name and roles properly
         name = resolve_display_name(user, username)
-        db_username = username
-        if user and isinstance(user, sqlite3.Row):
-            if 'username' in user.keys() and user['username']:
-                db_username = user['username']
-
+        
         role_from_db = selected_role
         if user and isinstance(user, sqlite3.Row):
             if 'role' in user.keys() and user['role']:
@@ -176,18 +170,26 @@ def login():
             elif 'reg_no' in user.keys() and user['reg_no']:
                 role_from_db = 'student'
 
-        conn.close()
+        # 2. Check credentials / user existence, then assign session
+        if user:
+            # Use 'id' if available in keys, otherwise fallback to username
+            user_id = user['id'] if 'id' in user.keys() else username
+            
+            session['user_id'] = user_id
+            session['username'] = username
+            session['name'] = name
+            session['role'] = role_from_db
 
-        session['user_id'] = user['id'] if user and isinstance(user, sqlite3.Row) and 'id' in user.keys() else 1
-        session['username'] = db_username
-        session['name'] = name or db_username
-        session['role'] = role_from_db
+            conn.close()
 
-        if role_from_db == 'student':
-            return redirect(url_for('dashboard'))
+            if role_from_db == 'faculty':
+                return redirect(url_for('submissions'))
+            else:
+                return redirect(url_for('student_dash'))
         else:
-            return redirect(url_for('submissions'))
-
+            conn.close()
+            # Handle invalid login here (e.g., flash message or re-render login)
+            
     return render_template('login.html')
 @app.route('/logout')
 def logout():
@@ -470,34 +472,25 @@ def assignments_list():
     conn.close()
     return render_template('assignments.html', assignments=assignments_list)
 
-@app.route('/profile')
+@app.route('/profile') # or your specific profile route name
 def profile():
-    if 'user_id' not in session or session.get('role') != 'student':
+    if 'username' not in session and 'user_id' not in session:
         return redirect(url_for('login'))
-
+        
     conn = get_db_connection()
     cursor = conn.cursor()
-    user = None
-
-    if session.get('user_id'):
-        cursor.execute("SELECT * FROM students WHERE id = ?", (session.get('user_id'),))
-        user = cursor.fetchone()
-
-    if user is None and session.get('username'):
+    
+    # Fetch user based on session role or username
+    if session.get('role') == 'faculty':
+        cursor.execute("SELECT * FROM faculty WHERE username = ?", (session.get('username'),))
+    else:
         cursor.execute("SELECT * FROM students WHERE username = ?", (session.get('username'),))
-        user = cursor.fetchone()
-
-    if user is None and session.get('name'):
-        cursor.execute("SELECT * FROM students WHERE full_name = ? OR username = ?", (session.get('name'), session.get('name')))
-        user = cursor.fetchone()
-
+        
+    user = cursor.fetchone()
     conn.close()
-    user_dict = row_to_dict(user)
-    if user_dict and not user_dict.get('name') and user_dict.get('full_name'):
-        user_dict['name'] = user_dict['full_name']
-
-    return render_template('student_profile.html', user=user_dict)
-
+    
+    # Pass 'user' and ensure session name is available
+    return render_template('profile.html', user=user)
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':

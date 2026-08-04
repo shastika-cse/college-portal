@@ -30,7 +30,7 @@
                     {{ session['username'][0] | upper if session.get('username') else 'U' }}
                 </div>
                 <div>
-                    <h6 class="fw-bold mb-0 text-dark" style="font-size: 0.95rem;">{{ session.get('name') or user.get('name') or user.get('full_name') or session.get('username') or 'User' }}</h6>
+                    <h6 class="fw-bold mb-0 text-dark" style="font-size: 0.95rem;">{{ session.get('name') or (student.get('name') if student else None) or session.get('username') or 'Student' }}</h6>
                     <p class="text-muted mb-0 small text-capitalize">{{ session.get('role', 'User') }}</p>
                 </div>
             </div>
