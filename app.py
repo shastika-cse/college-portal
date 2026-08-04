@@ -12,27 +12,22 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
 
-def get_db_connection():
-    conn = sqlite3.connect('database.db')
-    conn.row_factory = sqlite3.Row
-    return conn
 
-def init_db():
-    conn = get_db_connection()
-    
-    # Assignments table
-    conn.execute('''
+def init_db(conn=None):
+    own_connection = conn is None
+    if conn is None:
+        conn = sqlite3.connect('database.db')
+        conn.row_factory = sqlite3.Row
+
+    conn.executescript('''
         CREATE TABLE IF NOT EXISTS assignments (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             title TEXT,
             description TEXT,
             deadline TEXT,
             target_class TEXT
-        )
-    ''')
+        );
 
-    # Faculty table
-    conn.execute('''
         CREATE TABLE IF NOT EXISTS faculty (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT,
@@ -51,11 +46,18 @@ def init_db():
             research_areas TEXT,
             bio TEXT,
             philosophy TEXT
-        )
-    ''')
+        );
 
-    # Submissions table
-    conn.execute('''
+        CREATE TABLE IF NOT EXISTS students (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT,
+            full_name TEXT,
+            reg_no TEXT,
+            class_name TEXT,
+            year TEXT,
+            password TEXT
+        );
+
         CREATE TABLE IF NOT EXISTS submissions (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             assignment_title TEXT,
@@ -66,11 +68,20 @@ def init_db():
             file_path TEXT,
             timestamp TEXT,
             is_duplicate INTEGER DEFAULT 0
-        )
+        );
     ''')
-    
     conn.commit()
-    conn.close()
+
+    if own_connection:
+        conn.close()
+
+
+def get_db_connection():
+    conn = sqlite3.connect('database.db')
+    conn.row_factory = sqlite3.Row
+    init_db(conn)
+    return conn
+
 
 init_db()
 
@@ -82,17 +93,38 @@ def index():
 def login():
     if request.method == 'POST':
         username = request.form.get('username')
+        password = request.form.get('password')
         role = request.form.get('role', 'faculty')
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        user = None
+        name = username
+
+        if role == 'faculty':
+            cursor.execute("SELECT * FROM faculty WHERE username = ?", (username,))
+            user = cursor.fetchone()
+            if user:
+                name = user['full_name'] or user['username'] or username
+        else:
+            cursor.execute("SELECT * FROM students WHERE username = ?", (username,))
+            user = cursor.fetchone()
+            if user:
+                name = user['full_name'] or user['username'] or username
+
+        conn.close()
+
+        session['user_id'] = user['id'] if user and 'id' in user.keys() else 1
         session['username'] = username
+        session['name'] = name or username
         session['role'] = role
-        session['user_id'] = 1
-        session['name'] = username  # temporary name storage
+
         if role == 'faculty':
             return redirect(url_for('submissions'))
         else:
             return redirect(url_for('assignments_list'))
-    return render_template('login.html')
 
+    return render_template('login.html')
 @app.route('/logout')
 def logout():
     session.clear()
@@ -130,7 +162,12 @@ def submissions():
     submissions_list = conn.execute(query, params).fetchall()
     conn.close()
 
-    return render_template('submissions.html', submissions=submissions_list, assignments=assignments)
+    return render_template(
+        'submissions.html',
+        submissions=submissions_list,
+        assignments=assignments,
+        display_name=session.get('name') or session.get('username') or 'Faculty'
+    )
 
 @app.route('/faculty_profile')
 def faculty_profile():
