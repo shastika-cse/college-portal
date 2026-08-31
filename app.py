@@ -1,478 +1,172 @@
-import os
 import sqlite3
-from datetime import datetime
-from flask import Flask, render_template, request, redirect, url_for, session
+from flask import Flask, render_template, request, redirect, url_for, session, flash
 
 app = Flask(__name__)
-app.secret_key = 'your_secret_key_here'
-
-UPLOAD_FOLDER = 'static/uploads'
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-
-if not os.path.exists(UPLOAD_FOLDER):
-    os.makedirs(UPLOAD_FOLDER)
-
-
-def init_db(conn=None):
-    own_connection = conn is None
-    if conn is None:
-        conn = sqlite3.connect('database.db')
-        conn.row_factory = sqlite3.Row
-
-    conn.executescript('''
-        CREATE TABLE IF NOT EXISTS assignments (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            title TEXT,
-            description TEXT,
-            deadline TEXT,
-            target_class TEXT
-        );
-
-        CREATE TABLE IF NOT EXISTS faculty (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT,
-            full_name TEXT,
-            employee_id TEXT,
-            designation TEXT,
-            department TEXT,
-            email TEXT,
-            phone TEXT,
-            office_room TEXT,
-            qualification TEXT,
-            specialization TEXT,
-            experience TEXT,
-            subjects_handling TEXT,
-            current_subjects TEXT,
-            research_areas TEXT,
-            bio TEXT,
-            philosophy TEXT,
-            role TEXT DEFAULT 'faculty'
-        );
-
-        CREATE TABLE IF NOT EXISTS students (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT,
-            full_name TEXT,
-            reg_no TEXT,
-            class_name TEXT,
-            year TEXT,
-            password TEXT,
-            role TEXT DEFAULT 'student'
-        );
-
-        CREATE TABLE IF NOT EXISTS submissions (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            assignment_title TEXT,
-            student_name TEXT,
-            reg_no TEXT,
-            class_name TEXT,
-            year TEXT,
-            file_path TEXT,
-            timestamp TEXT,
-            is_duplicate INTEGER DEFAULT 0
-        );
-    ''')
-
-    for table_name, default_role in (('faculty', 'faculty'), ('students', 'student')):
-        columns = conn.execute(f'PRAGMA table_info({table_name})').fetchall()
-        has_role = any(column['name'] == 'role' for column in columns)
-        if not has_role:
-            conn.execute(f"ALTER TABLE {table_name} ADD COLUMN role TEXT DEFAULT '{default_role}'")
-
-    conn.commit()
-
-    if own_connection:
-        conn.close()
-
+app.secret_key = 'your_secret_key_here' # Change this to a secure random key
 
 def get_db_connection():
-    conn = sqlite3.connect('database.db')
+    conn = sqlite3.connect('college_portal.db')
     conn.row_factory = sqlite3.Row
-    init_db(conn)
     return conn
 
-
-def resolve_display_name(user, fallback_username):
-    if user is None:
-        return fallback_username
-
-    if isinstance(user, sqlite3.Row):
-        for key in ('full_name', 'name', 'username'):
-            if key in user.keys() and user[key]:
-                return user[key]
-        return fallback_username
-
-    if isinstance(user, dict):
-        for key in ('full_name', 'name', 'username'):
-            value = user.get(key)
-            if value:
-                return value
-        return fallback_username
-
-    if isinstance(user, tuple):
-        for index in (2, 1, 0):
-            if len(user) > index and user[index]:
-                return user[index]
-        return fallback_username
-
-    return fallback_username
-
-
-def row_to_dict(row):
-    if row is None:
-        return {}
-    if isinstance(row, sqlite3.Row):
-        return {key: row[key] for key in row.keys()}
-    if isinstance(row, dict):
-        return row
-    return {}
-
+def init_db():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    # Create tables if they do not exist
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS students (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE NOT NULL,
+            email TEXT UNIQUE NOT NULL,
+            password TEXT NOT NULL,
+            name TEXT,
+            reg_no TEXT,
+            role TEXT DEFAULT 'student'
+        )
+    ''')
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS faculty (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE NOT NULL,
+            email TEXT UNIQUE NOT NULL,
+            password TEXT NOT NULL,
+            name TEXT,
+            designation TEXT,
+            role TEXT DEFAULT 'faculty'
+        )
+    ''')
+    conn.commit()
+    conn.close()
 
 init_db()
 
+def resolve_display_name(user, username):
+    if user and isinstance(user, sqlite3.Row):
+        if 'name' in user.keys() and user['name']:
+            return user['name']
+    return username
+
 @app.route('/')
 def index():
-    # Check if user is already logged in, otherwise send them to login page
+    # Session-la user data iruntha, direct-ah dashboard-ku anuppiduvom
     if 'user_id' in session or 'username' in session:
         if session.get('role') == 'faculty':
             return redirect(url_for('submissions'))
         else:
             return redirect(url_for('student_dash'))
+    
+    # Session illa na mattum thaan login page-kku pogum
     return redirect(url_for('login'))
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'POST':
+        # Accept whichever field name the HTML form uses
+        email = request.form.get('email') or request.form.get('username')
+        password = request.form.get('password')
+        name = request.form.get('name') or request.form.get('fullname') or email.split('@')[0]
+        role = request.form.get('role', 'student').lower()
+        reg_no = request.form.get('reg_no', '')
+
+        print(f"DEBUG REGISTER -> Email: {email}, Password: {password}, Role: {role}")
+
+        if not email or not password:
+            return render_template('register.html', error="Email and Password are required!")
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        try:
+            if role == 'faculty':
+                cursor.execute(
+                    "INSERT INTO faculty (username, email, password, name, designation, role) VALUES (?, ?, ?, ?, ?, ?)",
+                    (email, email, password, name, 'Faculty', 'faculty')
+                )
+            else:
+                cursor.execute(
+                    "INSERT INTO students (username, email, password, name, reg_no, role) VALUES (?, ?, ?, ?, ?, ?)",
+                    (email, email, password, name, reg_no, 'student')
+                )
+            conn.commit()
+            conn.close()
+            return redirect(url_for('login'))
+        except Exception as e:
+            conn.close()
+            print(f"Registration Error: {e}")
+            return render_template('register.html', error=f"Error: {e}")
+
+    return render_template('register.html')
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    error = None
     if request.method == 'POST':
-        username = request.form.get('username')
+        # Grab input from whichever name the login form uses
+        user_input = request.form.get('username') or request.form.get('email')
         password = request.form.get('password')
-        selected_role = request.form.get('role', 'faculty')
+        selected_role = request.form.get('role', 'student').lower()
+
+        print(f"DEBUG LOGIN -> Input: {user_input}, Password: {password}, Role: {selected_role}")
 
         conn = get_db_connection()
         cursor = conn.cursor()
         user = None
 
-        if selected_role == 'faculty':
-            cursor.execute("SELECT * FROM faculty WHERE username = ?", (username,))
-            user = cursor.fetchone()
-        else:
-            cursor.execute("SELECT * FROM students WHERE username = ?", (username,))
-            user = cursor.fetchone()
-
-        # 1. First, resolve name and roles properly
-        name = resolve_display_name(user, username)
-        
-        role_from_db = selected_role
-        if user and isinstance(user, sqlite3.Row):
-            if 'role' in user.keys() and user['role']:
-                role_from_db = user['role']
-            elif 'designation' in user.keys() and user['designation']:
-                role_from_db = 'faculty'
-            elif 'reg_no' in user.keys() and user['reg_no']:
-                role_from_db = 'student'
-
-        # 2. Check credentials / user existence, then assign session
+        # Check in students and faculty tables
+        cursor.execute("SELECT * FROM students WHERE (username = ? OR email = ?) AND password = ?", (user_input, user_input, password))
+        user = cursor.fetchone()
         if user:
-            # Use 'id' if available in keys, otherwise fallback to username
-            user_id = user['id'] if 'id' in user.keys() else username
-            
-            session['user_id'] = user_id
-            session['username'] = username
-            session['name'] = name
-            session['role'] = role_from_db
+            selected_role = 'student'
+        else:
+            cursor.execute("SELECT * FROM faculty WHERE (username = ? OR email = ?) AND password = ?", (user_input, user_input, password))
+            user = cursor.fetchone()
+            if user:
+                selected_role = 'faculty'
 
+        if user:
+            session['user_id'] = user['id'] if 'id' in user.keys() else user_input
+            session['username'] = user['username'] if 'username' in user.keys() else user_input
+            session['name'] = user['name'] if 'name' in user.keys() else user_input
+            session['role'] = selected_role
             conn.close()
 
-            if role_from_db == 'faculty':
+            if selected_role == 'faculty':
                 return redirect(url_for('submissions'))
             else:
                 return redirect(url_for('student_dash'))
         else:
             conn.close()
-            # Handle invalid login here (e.g., flash message or re-render login)
-            
-    return render_template('login.html')
-@app.route('/logout')
-def logout():
-    session.clear()
-    return redirect(url_for('login'))
+            error = "Invalid Email/Username or Password! Please check."
+
+    return render_template('login.html', error=error)
+
+@app.route('/student_dash')
+def student_dash():
+    if 'username' not in session and 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM students WHERE username = ? OR email = ?", (session.get('username'), session.get('username')))
+    student = cursor.fetchone()
+    conn.close()
+
+    return render_template('student_dashboard.html', student=student)
 
 @app.route('/submissions')
 def submissions():
-    if 'user_id' not in session or session.get('role') != 'faculty':
+    if 'username' not in session and 'user_id' not in session:
         return redirect(url_for('login'))
-
-    filter_assignment = request.args.get('filter_assignment', '')
-    filter_reg = request.args.get('filter_reg', '')
-    filter_class = request.args.get('filter_class', '')
-    filter_year = request.args.get('filter_year', '')
-
-    conn = get_db_connection()
-    assignments = conn.execute("SELECT * FROM assignments").fetchall()
-
-    query = "SELECT * FROM submissions WHERE 1=1"
-    params = []
-
-    if filter_assignment:
-        query += " AND assignment_title = ?"
-        params.append(filter_assignment)
-    if filter_reg:
-        query += " AND reg_no LIKE ?"
-        params.append(f"%{filter_reg}%")
-    if filter_class:
-        query += " AND class_name LIKE ?"
-        params.append(f"%{filter_class}%")
-    if filter_year:
-        query += " AND year LIKE ?"
-        params.append(f"%{filter_year}%")
-
-    submissions_list = conn.execute(query, params).fetchall()
-    conn.close()
-
-    return render_template(
-        'submissions.html',
-        submissions=submissions_list,
-        assignments=assignments,
-        display_name=session.get('name') or session.get('username') or 'Faculty'
-    )
-
-@app.route('/faculty_profile')
-def faculty_profile():
-    if 'user_id' not in session or session.get('role') != 'faculty':
-        return redirect(url_for('login'))
-
+    
     conn = get_db_connection()
     cursor = conn.cursor()
-    username = session.get('username')
-    display_name = session.get('name')
-
-    cursor.execute("SELECT * FROM faculty WHERE username = ?", (username,))
+    cursor.execute("SELECT * FROM faculty WHERE username = ? OR email = ?", (session.get('username'), session.get('username')))
     faculty = cursor.fetchone()
-
-    if not faculty:
-        cursor.execute("SELECT * FROM faculty WHERE full_name = ?", (display_name,))
-        faculty = cursor.fetchone()
-
     conn.close()
 
     return render_template('faculty_profile.html', faculty=faculty)
 
-@app.route('/edit_faculty_profile', methods=['GET', 'POST'])
-def edit_faculty_profile():
-    if 'user_id' not in session or session.get('role') != 'faculty':
-        return redirect(url_for('login'))
-
-    conn = get_db_connection()
-    cursor = conn.cursor()
-
-    if request.method == 'POST':
-        full_name = request.form.get('full_name') or session.get('name') or session.get('username')
-        employee_id = request.form.get('employee_id')
-        designation = request.form.get('designation')
-        department = request.form.get('department')
-        email = request.form.get('email')
-        phone = request.form.get('phone')
-        office_room = request.form.get('office_room')
-        qualification = request.form.get('qualification')
-        specialization = request.form.get('specialization')
-        experience = request.form.get('experience')
-        subjects_handling = request.form.get('subjects_handling')
-        current_subjects = request.form.get('current_subjects')
-        research_areas = request.form.get('research_areas')
-        bio = request.form.get('bio')
-        philosophy = request.form.get('philosophy')
-
-        username = session.get('username')
-        cursor.execute("SELECT * FROM faculty WHERE username = ?", (username,))
-        existing = cursor.fetchone()
-
-        if existing:
-            cursor.execute('''
-                UPDATE faculty SET
-                    username=?,
-                    full_name=?,
-                    employee_id=?,
-                    designation=?,
-                    department=?,
-                    email=?,
-                    phone=?,
-                    office_room=?,
-                    qualification=?,
-                    specialization=?,
-                    experience=?,
-                    subjects_handling=?,
-                    current_subjects=?,
-                    research_areas=?,
-                    bio=?,
-                    philosophy=?
-                WHERE username=?
-            ''', (
-                username,
-                full_name,
-                employee_id,
-                designation,
-                department,
-                email,
-                phone,
-                office_room,
-                qualification,
-                specialization,
-                experience,
-                subjects_handling,
-                current_subjects,
-                research_areas,
-                bio,
-                philosophy,
-                username,
-            ))
-        else:
-            cursor.execute('''
-                INSERT INTO faculty (
-                    username, full_name, employee_id, designation, department, email,
-                    phone, office_room, qualification, specialization, experience,
-                    subjects_handling, current_subjects, research_areas, bio, philosophy
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (
-                username,
-                full_name,
-                employee_id,
-                designation,
-                department,
-                email,
-                phone,
-                office_room,
-                qualification,
-                specialization,
-                experience,
-                subjects_handling,
-                current_subjects,
-                research_areas,
-                bio,
-                philosophy,
-            ))
-
-        session['name'] = full_name
-        session['username'] = username
-        conn.commit()
-        conn.close()
-        return redirect(url_for('faculty_profile'))
-
-    cursor.execute("SELECT * FROM faculty WHERE username = ?", (session.get('username'),))
-    faculty = cursor.fetchone()
-    conn.close()
-
-    return render_template('edit_faculty_profile.html', faculty=faculty)
-
-@app.route('/post_assignment', methods=['GET', 'POST'])
-def post_assignment():
-    if 'user_id' not in session or session.get('role') != 'faculty':
-        return redirect(url_for('login'))
-    
-    if request.method == 'POST':
-        title = request.form.get('title')
-        description = request.form.get('description')
-        deadline = request.form.get('deadline')
-        target_class = request.form.get('target_class')
-        
-        conn = get_db_connection()
-        conn.execute('INSERT INTO assignments (title, description, deadline, target_class) VALUES (?, ?, ?, ?)',
-                     (title, description, deadline, target_class))
-        conn.commit()
-        conn.close()
-        return redirect(url_for('submissions'))
-        
-    return render_template('post_assignment.html')
-
-@app.route('/dashboard')
-def dashboard():
-    if 'user_id' not in session or session.get('role') != 'student':
-        return redirect(url_for('login'))
-
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    student = None
-
-    if session.get('user_id'):
-        cursor.execute("SELECT * FROM students WHERE id = ?", (session.get('user_id'),))
-        student = cursor.fetchone()
-
-    if student is None and session.get('username'):
-        cursor.execute("SELECT * FROM students WHERE username = ?", (session.get('username'),))
-        student = cursor.fetchone()
-
-    assignments = conn.execute('SELECT * FROM assignments').fetchall()
-    student_dict = row_to_dict(student)
-    submitted_count = conn.execute(
-        'SELECT COUNT(*) AS count FROM submissions WHERE student_name = ?',
-        (student_dict.get('full_name') or session.get('name') or session.get('username'),)
-    ).fetchone()['count']
-    conn.close()
-
-    return render_template(
-        'student_dashboard.html',
-        student=student_dict,
-        assignments=assignments,
-        submitted_count=submitted_count,
-        completed_count=0,
-        pending_count=max(0, len(assignments) - submitted_count),
-        progress_percentage=min(100, int((submitted_count / len(assignments)) * 100)) if assignments else 0,
-    )
-
-@app.route('/submit_assignment/<int:assignment_id>', methods=['POST'])
-def submit_assignment(assignment_id):
-    if 'user_id' not in session or session.get('role') != 'student':
-        return redirect(url_for('login'))
-
-    file = request.files.get('file')
-    if not file or not file.filename:
-        return redirect(url_for('assignments_list'))
-
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    assignment = cursor.execute('SELECT * FROM assignments WHERE id = ?', (assignment_id,)).fetchone()
-    student = cursor.execute('SELECT * FROM students WHERE id = ?', (session.get('user_id'),)).fetchone()
-    conn.close()
-
-    if not assignment or not student:
-        return redirect(url_for('assignments_list'))
-
-    upload_dir = os.path.join(app.config['UPLOAD_FOLDER'])
-    os.makedirs(upload_dir, exist_ok=True)
-    filename = f"{session.get('username')}_{assignment_id}_{file.filename}"
-    file_path = os.path.join(upload_dir, filename)
-    file.save(file_path)
-
-    stored_path = f"static/uploads/{filename}"
-    conn = get_db_connection()
-    conn.execute(
-        '''
-        INSERT INTO submissions (assignment_title, student_name, reg_no, class_name, year, file_path, timestamp)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-        ''',
-        (
-            assignment['title'],
-            student['full_name'],
-            student['reg_no'],
-            student['class_name'],
-            student['year'],
-            stored_path,
-            datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-        ),
-    )
-    conn.commit()
-    conn.close()
-    return redirect(url_for('dashboard'))
-
-@app.route('/assignments')
-def assignments_list():
-    if 'user_id' not in session or session.get('role') != 'student':
-        return redirect(url_for('login'))
-
-    conn = get_db_connection()
-    assignments_list = conn.execute('SELECT * FROM assignments').fetchall()
-    conn.close()
-    return render_template('assignments.html', assignments=assignments_list)
-
-@app.route('/profile') # or your specific profile route name
+@app.route('/profile')
 def profile():
     if 'username' not in session and 'user_id' not in session:
         return redirect(url_for('login'))
@@ -480,53 +174,60 @@ def profile():
     conn = get_db_connection()
     cursor = conn.cursor()
     
-    # Fetch user based on session role or username
     if session.get('role') == 'faculty':
-        cursor.execute("SELECT * FROM faculty WHERE username = ?", (session.get('username'),))
-    else:
-        cursor.execute("SELECT * FROM students WHERE username = ?", (session.get('username'),))
-        
-    user = cursor.fetchone()
-    conn.close()
-    
-    # Pass 'user' and ensure session name is available
-    return render_template('profile.html', user=user)
-@app.route('/register', methods=['GET', 'POST'])
-def register():
-    if request.method == 'POST':
-        full_name = request.form.get('username')
-        email = request.form.get('email')
-        password = request.form.get('password')
-        role = request.form.get('role') or request.form.get('role', 'student')
-        reg_no = request.form.get('reg_no')
-        class_name = request.form.get('class_name')
-        year = request.form.get('year')
-
-        conn = get_db_connection()
-        cursor = conn.cursor()
-
-        if role == 'faculty':
-            cursor.execute(
-                '''
-                INSERT INTO faculty (username, full_name, email, department, designation, role)
-                VALUES (?, ?, ?, ?, ?, ?)
-                ''',
-                (full_name, full_name, email, 'General', 'Professor', role)
-            )
-        else:
-            cursor.execute(
-                '''
-                INSERT INTO students (username, full_name, reg_no, class_name, year, password, role)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-                ''',
-                (full_name, full_name, reg_no, class_name, year, password, role)
-            )
-
-        conn.commit()
+        cursor.execute("SELECT * FROM faculty WHERE username = ? OR email = ?", (session.get('username'), session.get('username')))
+        user = cursor.fetchone()
         conn.close()
+        return render_template('faculty_profile.html', faculty=user)
+    else:
+        cursor.execute("SELECT * FROM students WHERE username = ? OR email = ?", (session.get('username'), session.get('username')))
+        user = cursor.fetchone()
+        conn.close()
+        return render_template('student_profile.html', student=user)
+    
+@app.route('/edit_faculty_profile', methods=['GET', 'POST'])
+def edit_faculty_profile():
+    if 'username' not in session and 'user_id' not in session:
         return redirect(url_for('login'))
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    if request.method == 'POST':
+        # Print form data to terminal to see what's coming from HTML
+        print("FORM DATA RECEIVED:", request.form)
+        
+        name = request.form.get('name') or request.form.get('fullname') or request.form.get('username')
+        designation = request.form.get('designation')
+        department = request.form.get('department')
+        phone = request.form.get('phone') or request.form.get('phone_number')
+        room = request.form.get('room') or request.form.get('office_room_number')
+        
+        username_key = session.get('username')
+        
+        try:
+            # Update basic fields that definitely exist in table
+            cursor.execute(
+                "UPDATE faculty SET name = ?, designation = ? WHERE username = ? OR email = ?",
+                (name, designation, username_key, username_key)
+            )
+            conn.commit()
+            print("Database update successful!")
+        except Exception as e:
+            print(f"Update Error: {e}")
+            
+        conn.close()
+        return redirect(url_for('profile'))
+        
+    cursor.execute("SELECT * FROM faculty WHERE username = ? OR email = ?", (session.get('username'), session.get('username')))
+    faculty = cursor.fetchone()
+    conn.close()
+    return render_template('edit_faculty_profile.html', faculty=faculty)
 
-    return render_template('register.html')
+@app.route('/logout')
+def logout():
+    session.clear()
+    return redirect(url_for('login'))
 
 if __name__ == '__main__':
     app.run(debug=True)
